@@ -2,39 +2,43 @@ package main
 
 import (
 	"fmt"
-	"strings"
-
-	"golang.org/x/net/html"
+	"os"
+	"strconv"
 )
 
 func main() {
-	htmlBody := `
-<html>
-	<body>
-		<a href="path/one">
-			<span>Boot.dev</span>
-		</a>
-		<a href="https://other.com/path/one">
-			<span>Boot.dev</span>
-		</a>
-	</body>
-</html>
-	`
-	tree, _ := html.Parse(strings.NewReader(htmlBody))
-	var f func(n *html.Node)
-	f = func(n *html.Node) {
-		if n.Type == html.ElementNode && n.Data == "a" {
-			for _, a := range n.Attr {
-				if a.Key == "href" {
-					fmt.Println(a.Val)
-					break
-				}
-			}
-		}
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			f(c)
-		}
+	if len(os.Args[1:]) < 3 {
+		fmt.Println("too few arguments provided")
+		os.Exit(1)
+	}
+	if len(os.Args[1:]) > 3 {
+		fmt.Println("too many arguments provided")
+		os.Exit(1)
 	}
 
-	f(tree)
+	baseURL := os.Args[1]
+	maxConcurrency, err := strconv.Atoi(os.Args[2])
+	if err != nil {
+		fmt.Printf("error parsing max concurrency: %v", err)
+		return
+	}
+
+	maxPages, err := strconv.Atoi(os.Args[3])
+	if err != nil {
+		fmt.Printf("error parsing max pages: %v", err)
+		return
+	}
+
+	cfg, err := configure(baseURL, maxConcurrency, maxPages)
+	if err != nil {
+		fmt.Printf("error configuring: %v", err)
+		return
+	}
+	fmt.Printf("starting to crawl %s\n", baseURL)
+
+	cfg.wg.Add(1)
+	cfg.crawlPage(baseURL)
+	cfg.wg.Wait()
+
+	printReport(cfg.pages, baseURL)
 }

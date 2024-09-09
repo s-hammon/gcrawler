@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net/url"
 	"reflect"
 	"testing"
 )
@@ -49,7 +50,13 @@ func TestGetURLsFromHTML(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getURLsFromHTML(tt.htmlBody, tt.rawBaseURL)
+			baseURL, err := url.Parse(tt.rawBaseURL)
+			if err != nil {
+				t.Errorf("Test %s failed, unexpected error: %v", tt.name, err)
+				return
+			}
+
+			got, err := getURLsFromHTML(tt.htmlBody, baseURL)
 			if err != nil {
 				t.Errorf("Test %s failed, unexpected error: %v", tt.name, err)
 			}
@@ -82,7 +89,13 @@ func TestGetURLsFromHTMLError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := getURLsFromHTML(tt.htmlBody, tt.rawBaseURL)
+			baseURL, err := url.Parse(tt.rawBaseURL)
+			if err != nil {
+				t.Errorf("Test %s failed, unexpected error: %v", tt.name, err)
+				return
+			}
+
+			_, err = getURLsFromHTML(tt.htmlBody, baseURL)
 			if err == nil {
 				t.Errorf("Test %s failed, expected error", tt.name)
 			}
